@@ -27,5 +27,15 @@ mongoose.connect(connectionString, { connectTimeoutMS: 2000 })
   .then(() => console.log('Database connected ✅'))
   .catch(error => console.error(error));
 
-module.exports = app;
+
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
+
+// Ajoutez une route test
+app.get('/', (req, res) => {
+    res.json({ message: 'TaskMaster API is running' });
+});
 
