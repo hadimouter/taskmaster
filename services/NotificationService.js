@@ -56,13 +56,21 @@ class NotificationService {
 
       // Récupérer les tâches qui arrivent à échéance dans les 24h
       const tasks = await Task.find({
-        dueDate: {
-          $gte: now,
-          $lte: tomorrow
-        },
-        status: { $ne: 'completed' },
-        // Ajouter un champ pour suivre les notifications envoyées
-        lastNotificationSent: { $ne: true }
+        $or: [
+          {
+            // Tâches arrivant à échéance dans les prochaines 24 heures
+            dueDate: {
+              $gte: now,
+              $lte: tomorrow
+            }
+          },
+          {
+            // Tâches déjà en retard
+            dueDate: { $lt: now },
+            status: { $ne: 'completed' }, // Toujours exclure les tâches terminées
+          }
+        ],
+        lastNotificationSent: { $ne: true } // Pas encore notifiées
       }).populate('userId');
 
       for (const task of tasks) {
@@ -228,9 +236,7 @@ class NotificationService {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     })}
           </div>
           
@@ -243,7 +249,7 @@ class NotificationService {
         </div>
 
         <div style="text-align: center;">
-          <a href="http://localhost:3001/tasks/${task._id}" id="button">
+          <a href="https://taskmaster-frontend-seven.vercel.app/" id="button">
             Voir la tâche →
           </a>
         </div>
