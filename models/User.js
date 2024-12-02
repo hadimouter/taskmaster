@@ -5,10 +5,12 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   token: { type: String, required: true },
+  resetToken: String,
+  resetTokenExpiry: Date,
   createdAt: { type: Date, default: Date.now },
   notifications: {
     emailNotifications: { type: Boolean, default: true },
-    taskReminders: { type: Boolean, default: true },
+    taskReminders: { type: Boolean, default: true }, 
     dueDateAlerts: { type: Boolean, default: true }
   }
 });

@@ -5,6 +5,10 @@ const User = require('../models/User');
 const uid2 = require('uid2');
 const validator = require('validator');
 const { checkBody } = require('../modules/checkBody');
+const crypto = require('crypto');
+const sendResetEmail = require('../emails/resetPassword');
+
+
 
 router.post('/register', async (req, res) => {
   try {
@@ -17,6 +21,9 @@ router.post('/register', async (req, res) => {
     const existingUser = await User.findOne({ email: req.body.email });
     if (existingUser) {
       return res.status(409).json({ error: 'Utilisateur déjà existant' });
+    }
+    if (password.length < 6) {
+      return res.json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
     }
     const hash = await bcrypt.hash(req.body.password, 10);
     const newUser = new User({ 
@@ -69,5 +76,60 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({ error: 'Aucun compte associé à cet email' });
+    }
+    
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000;
+    
+    await User.updateOne(
+      { email },
+      { $set: { resetToken, resetTokenExpiry } }
+    );
+
+    await sendResetEmail(email, resetToken);
+    
+    res.json({ result: true });
+  } catch (error) {
+    res.json({ error: 'Erreur serveur' });
+  }
+});
+
+
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.json({ error: 'Token invalide ou expiré' });
+    }
+    if (password.length < 6) {
+      return res.json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    await User.updateOne(
+      { resetToken: token },
+      {
+        $set: { password: hash },
+        $unset: { resetToken: 1, resetTokenExpiry: 1 }
+      }
+    );
+
+    res.json({ result: true });
+  } catch (error) {
+    res.json({ error: 'Erreur serveur' });
+  }
+});
 
 module.exports = router;
